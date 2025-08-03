@@ -4,18 +4,26 @@ const crypto = require("crypto");
 const Form = require("../models/Form");
 const Response = require("../models/Response");
 
-// ✅ Save Form
+// ✅ CREATE/SAVE new form
 router.post("/save", async (req, res) => {
   try {
     const { projectName, formName, type, pages, conditions, userId } = req.body;
 
-    // Generate random link
-    const randomSuffix = crypto.randomBytes(4).toString("hex"); // 8 chars
+    // Generate a unique link
+    const randomSuffix = crypto.randomBytes(4).toString("hex");
     const link = `${projectName.toLowerCase().replace(/\s+/g, "-")}-${randomSuffix}`;
 
-    const newForm = new Form({ projectName, formName, type, pages, conditions, link, createdBy: userId });
-    await newForm.save();
+    const newForm = new Form({
+      projectName,
+      formName,
+      type,
+      pages,
+      conditions,
+      link,
+      createdBy: userId,
+    });
 
+    await newForm.save();
     res.status(201).json({ msg: "Form saved successfully", link: `/form/${link}` });
   } catch (err) {
     console.error("❌ Save Form Error:", err);
@@ -23,18 +31,34 @@ router.post("/save", async (req, res) => {
   }
 });
 
-// ✅ Get Form by Link
+// ✅ UPDATE form (used for draft save/update)
+router.put("/update/:formId", async (req, res) => {
+  try {
+    const updated = await Form.findByIdAndUpdate(
+      req.params.formId,
+      { ...req.body },
+      { new: true }
+    );
+    res.status(200).json(updated);
+  } catch (err) {
+    console.error("❌ Update Form Error:", err);
+    res.status(500).json({ error: "Failed to update form" });
+  }
+});
+
+// ✅ GET form by unique link (used in preview or live)
 router.get("/:link", async (req, res) => {
   try {
     const form = await Form.findOne({ link: req.params.link });
     if (!form) return res.status(404).json({ error: "Form not found" });
     res.json(form);
   } catch (err) {
+    console.error("❌ Get Form by Link Error:", err);
     res.status(500).json({ error: "Failed to fetch form" });
   }
 });
 
-// ✅ Submit Response
+// ✅ SUBMIT response to a form
 router.post("/:formId/submit", async (req, res) => {
   try {
     const { responses } = req.body;
@@ -51,12 +75,11 @@ router.post("/:formId/submit", async (req, res) => {
   }
 });
 
-// ✅ Analytics: Overview (Total Forms & Responses)
+// ✅ GET analytics: total forms + total responses
 router.get("/analytics/overview/:userId", async (req, res) => {
   try {
     const forms = await Form.find({ createdBy: req.params.userId });
     const formIds = forms.map(f => f._id);
-
     const totalResponses = await Response.countDocuments({ formId: { $in: formIds } });
 
     res.json({
@@ -69,7 +92,7 @@ router.get("/analytics/overview/:userId", async (req, res) => {
   }
 });
 
-// ✅ Analytics: Option-wise (Pie/Bar Chart Data)
+// ✅ GET analytics: per-option stats (for pie/bar charts)
 router.get("/analytics/options/:userId", async (req, res) => {
   try {
     const forms = await Form.find({ createdBy: req.params.userId });
@@ -97,21 +120,19 @@ router.get("/analytics/options/:userId", async (req, res) => {
       result[questionId] = percentages;
     }
 
-    res.json(result); // { questionId: { "Option 1": "60%", "Option 2": "40%" } }
+    res.json(result);
   } catch (err) {
     console.error("❌ Option Analytics Error:", err);
     res.status(500).json({ error: "Failed to fetch option analytics" });
   }
 });
 
-// ... existing routes above
-
-// ✅ Fetch All Projects for a User
+// ✅ GET all projects (forms) created by a user
 router.get("/projects/:userId", async (req, res) => {
   try {
     const projects = await Form.find({ createdBy: req.params.userId })
-      .select("projectName formName link createdAt updatedAt") // Return only required fields
-      .sort({ createdAt: -1 }); // Latest first
+      .select("projectName formName link createdAt updatedAt")
+      .sort({ createdAt: -1 });
 
     res.json(projects);
   } catch (err) {
@@ -119,6 +140,5 @@ router.get("/projects/:userId", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch projects" });
   }
 });
-
 
 module.exports = router;

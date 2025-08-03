@@ -15,18 +15,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Connect to MongoDB
+// ✅ Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log(`✅ MongoDB connected to: ${mongoose.connection.name}`))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-
-// ✅ Auth Routes
-const authRoutes = require("./routes/authRoutes");
-app.use("/api/auth", authRoutes);
-
+// ✅ Routes
+app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/forms", require("./routes/formRoutes"));
-
 
 // ✅ Catch-all for unmatched routes (debugging)
 app.use((req, res) => {
@@ -34,5 +30,6 @@ app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
+// ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

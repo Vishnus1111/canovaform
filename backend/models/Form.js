@@ -4,11 +4,27 @@ const formSchema = new mongoose.Schema({
   projectName: { type: String, required: true },
   formName: { type: String, required: true },
   type: { type: String, default: "default" },
-  link: { type: String, unique: true }, // Unique shareable link
-  pages: { type: Array, required: true }, // Form structure (sections, questions, etc.)
+  link: { type: String, unique: true },
+  pages: [
+    {
+      id: String,
+      title: String,
+      blocks: [
+        {
+          id: String,
+          type: String, // "short", "long", "mcq", "checkbox", "dropdown", "image", "video", etc.
+          label: String,
+          options: [String], // for dropdown/checkbox/mcq
+          required: Boolean,
+          mediaUrl: String,  // for image/video
+        },
+      ],
+    },
+  ],
   conditions: { type: Object, default: {} },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Optional: track creator
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   createdAt: { type: Date, default: Date.now },
+  status: { type: String, default: "draft" }, // NEW FIELD: 'draft' or 'published'
 });
 
 module.exports = mongoose.model("Form", formSchema);
