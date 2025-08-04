@@ -14,20 +14,21 @@ router.post("/save", async (req, res) => {
     const link = `${projectName.toLowerCase().replace(/\s+/g, "-")}-${randomSuffix}`;
 
     const newForm = new Form({
-      projectName,
-      formName,
-      type,
-      pages,
-      conditions,
-      link,
-      createdBy: userId,
-    });
-
-    await newForm.save();
-    res.status(201).json({ msg: "Form saved successfully", link: `/form/${link}` });
-  } catch (err) {
-    console.error("❌ Save Form Error:", err);
-    res.status(500).json({ error: "Failed to save form" });
+    projectName,
+    formName,
+    type,
+    pages,
+    conditions,
+    link,
+    createdBy: userId,
+  });
+  console.log(newForm);
+  const savedForm = await newForm.save();
+  console.log(savedForm);
+  res.status(201).json({ msg: "Form saved successfully", link: `/form/${link}` });
+} catch (err) {
+  console.error("Error saving form:", err);
+  res.status(500).json({ error: "Failed to save form" });
   }
 });
 

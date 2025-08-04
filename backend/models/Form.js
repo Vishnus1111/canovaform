@@ -9,6 +9,7 @@ const formSchema = new mongoose.Schema({
     {
       id: String,
       title: String,
+      blocks: [mongoose.Schema.Types.Mixed],
       blocks: [
         {
           id: String,
