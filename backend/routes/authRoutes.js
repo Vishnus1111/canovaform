@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const tls = require("tls");
 const User = require("../models/User");
+const config = require("../config/config");
 
 const router = express.Router();
 
@@ -68,7 +69,6 @@ async function sendEmailSMTP(fromEmail, fromPassword, toEmail, subject, body) {
 }
 
 // ✅ Register User
-// ✅ Register User
 router.post("/register", async (req, res) => {
   console.log("📥 Register Request Body:", req.body); // Log incoming data
   const { name, email, password } = req.body;
@@ -90,7 +90,6 @@ router.post("/register", async (req, res) => {
   }
 });
 
-
 // ✅ Login User
 router.post("/login", async (req, res) => {
   console.log("📥 Login Request:", req.body);
@@ -103,7 +102,7 @@ router.post("/login", async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: "Invalid credentials" });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const token = jwt.sign({ id: user._id }, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRE });
     res.json({
       token,
       user: { id: user._id, name: user.name, email: user.email, phone: user.phone || "", location: user.location || "" },
@@ -114,7 +113,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// ✅ Forgot Password (Send OTP)
+// ✅ Forgot Password (Send OTP + reset link)
 router.post("/forgot-password", async (req, res) => {
   console.log("📥 Forgot Password Request Body:", req.body);
   const { email } = req.body;
@@ -125,27 +124,38 @@ router.post("/forgot-password", async (req, res) => {
 
     const otp = generateOTP();
     user.otp = otp;
-    user.otpExpires = Date.now() + 5 * 60 * 1000;
+    user.otpExpires = Date.now() + (config.OTP_EXPIRE_MINUTES * 60 * 1000); // 5 minutes expiry
     await user.save();
 
     console.log(`🔑 Generated OTP for ${email}: ${otp}`);
 
-    // ✅ Try sending email but don't block UI if it fails
-    sendEmailSMTP(process.env.EMAIL_USER, process.env.EMAIL_PASS, email, "Password Reset OTP",
-      `Your OTP is: ${otp}. It will expire in 5 minutes.`
-    )
-      .then(() => console.log(`📧 OTP email sent to ${email}`))
-      .catch(err => console.error("❌ Email sending failed:", err));
+    // ✅ Build link to frontend reset page with production URL
+    const frontendBase = config.FRONTEND_URL;
+    const resetLink = `${frontendBase.replace(/\/$/, "")}/reset-password?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`;
+
+    const emailBody = config.EMAIL_TEMPLATES.PASSWORD_RESET.getBody(otp, resetLink);
+    const subject = config.EMAIL_TEMPLATES.PASSWORD_RESET.SUBJECT;
+
+    // ✅ Send email with better error handling
+    try {
+      await sendEmailSMTP(config.EMAIL_USER, config.EMAIL_PASS, email, subject, emailBody);
+      console.log(`📧 OTP email sent successfully to ${email}`);
+    } catch (emailError) {
+      console.error("❌ Email sending failed:", emailError);
+      // Don't fail the request if email fails, still return success
+    }
 
     // ✅ Respond immediately (frontend won't hang)
-    res.json({ msg: "OTP sent (check console for debugging)", otp }); // <-- TEMP include OTP in response for testing
+    res.json({ 
+      success: true,
+      msg: "Password reset instructions have been sent to your email address.",
+      resetLink: resetLink // Include reset link in response for debugging
+    });
   } catch (err) {
     console.error("❌ Forgot Password Error:", err);
-    res.status(500).json({ error: "Failed to process OTP request" });
+    res.status(500).json({ error: "Failed to process password reset request" });
   }
 });
-
-
 
 // ✅ Verify OTP
 router.post("/verify-otp", async (req, res) => {
@@ -160,7 +170,7 @@ router.post("/verify-otp", async (req, res) => {
     console.log(`⏱ OTP Expiry Time: ${user.otpExpires}, Current Time: ${Date.now()}`);
 
     // ✅ Ensure both are strings and trim spaces
-    if (user.otp.toString().trim() !== otp.toString().trim()) {
+    if (!user.otp || user.otp.toString().trim() !== otp.toString().trim()) {
       console.log("❌ OTP mismatch");
       return res.status(400).json({ error: "Invalid OTP" });
     }
@@ -204,7 +214,6 @@ router.post("/reset-password", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
 
 router.get("/test", (req, res) => {
   console.log("✅ Auth test route hit successfully");

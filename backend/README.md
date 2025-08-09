@@ -1,0 +1,86 @@
+# Canva Form Backend API
+
+## Overview
+This is the backend API for the Canva Form application, providing authentication, form management, and email services.
+
+## Live Deployment
+- **Backend URL**: https://canovaform.onrender.com/
+- **Frontend URL**: https://canovav1.vercel.app/
+
+## Features
+- User authentication (register, login, password reset)
+- Form creation and management
+- Response collection and analytics
+- Email notifications for password reset
+- CORS configuration for frontend integration
+
+## API Endpoints
+
+### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - User login
+- `POST /api/auth/forgot-password` - Request password reset
+- `POST /api/auth/verify-otp` - Verify OTP for password reset
+- `POST /api/auth/reset-password` - Reset password
+- `GET /api/auth/test` - Test auth routes
+
+### Forms
+- `POST /api/forms/save` - Create new form
+- `PUT /api/forms/update/:formId` - Update existing form
+- `GET /api/forms/:link` - Get form by unique link
+- `POST /api/forms/:formId/submit` - Submit form response
+- `GET /api/forms/analytics/overview/:userId` - Get analytics overview
+- `GET /api/forms/analytics/options/:userId` - Get option-wise analytics
+- `GET /api/forms/projects/:userId` - Get all user projects
+
+### Health Check
+- `GET /api/health` - Server health check
+- `GET /api/test-cors` - Test CORS configuration
+
+## Environment Variables
+Create a `.env` file in the backend directory with the following variables:
+
+```env
+PORT=5000
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret_key
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_app_specific_password
+FRONTEND_URL=https://canovav1.vercel.app
+```
+
+## Frontend Integration
+The backend is configured to work with the frontend deployed at `https://canovav1.vercel.app/`. The CORS policy is set up to allow requests from:
+- https://canovav1.vercel.app
+- http://localhost:3000 (for development)
+- http://localhost:3001 (for development)
+
+## Password Reset Flow
+1. User requests password reset via `/api/auth/forgot-password`
+2. Backend generates OTP and sends email with reset link
+3. Reset link points to: `https://canovav1.vercel.app/reset-password?email=...&otp=...`
+4. User verifies OTP via `/api/auth/verify-otp`
+5. User resets password via `/api/auth/reset-password`
+
+## Deployment Notes
+- The backend is deployed on Render.com
+- MongoDB should be hosted on MongoDB Atlas for production
+- Email service uses Gmail SMTP with app-specific password
+- All environment variables must be set in the deployment platform
+
+## Local Development
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Create `.env` file with local configuration
+4. Start development server: `npm run dev`
+
+## Production Deployment
+1. Set up MongoDB Atlas cluster
+2. Configure environment variables on Render.com
+3. Deploy using: `npm start`
+
+## Error Handling
+- All routes include proper error handling and logging
+- CORS errors are logged for debugging
+- Database connection errors are handled gracefully
+- Email failures don't block the password reset flow
