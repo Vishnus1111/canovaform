@@ -9,7 +9,7 @@ const config = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   
   // Database Configuration
-  MONGO_URI: process.env.MONGO_URI || 'mongodb://localhost:27017/canovaform',
+  MONGO_URI: process.env.MONGO_URI,
   
   // JWT Configuration
   JWT_SECRET: process.env.JWT_SECRET || 'fallback_jwt_secret_for_development',
